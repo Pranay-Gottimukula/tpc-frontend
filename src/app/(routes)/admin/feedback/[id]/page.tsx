@@ -79,7 +79,7 @@ const FeedbackDetailPage = ({ params }: any) => {
       <div className="bg-white p-8 border">
         {/* Header */}
         <h2 className="text-2xl font-semibold text-center">
-          TRAINING AND PLACEMENT OFFICE
+          CAREER ADVANCEMENT AND MENTORING CENTRE
         </h2>
         <h2 className="text-2xl font-semibold text-center">
           INDIAN INSTITUTE OF TECHNOLOGY, INDORE

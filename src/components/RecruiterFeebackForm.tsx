@@ -99,7 +99,7 @@ export default function RecruiterFeedbackForm({
               level={3}
               className="!text-[15px] md:!text-[20px]"
             >
-              TRAINING & PLACEMENT OFFICE
+              CAREER ADVANCEMENT AND MENTORING CENTRE
             </Title>
 
             <Title
@@ -111,7 +111,7 @@ export default function RecruiterFeedbackForm({
           </div>
 
           <Paragraph className="text-center text-[14px] md:text-[15px] leading-relaxed mt-4">
-            Postal Address: Training and Placement Cell, 3rd Floor,
+            Postal Address: Career Advancement and Mentoring Centre, 3rd Floor,
             <br />
             Abhinandan Bhavan, IIT Indore, Khandwa Road, Simrol, Indore – 453552 (M.P)
             <br />

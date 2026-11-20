@@ -107,7 +107,7 @@ const renderSingleFeedback = (
 
   /* ---------------- Header ---------------- */
 
-  centerText("TRAINING AND PLACEMENT OFFICE", 18);
+  centerText("CAREER ADVANCEMENT AND MENTORING CENTRE", 18);
   y += 10;
   centerText("INDIAN INSTITUTE OF TECHNOLOGY, INDORE", 18);
   doc.line(left, y, right, y);
