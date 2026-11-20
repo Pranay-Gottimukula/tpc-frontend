@@ -25,7 +25,14 @@ import Salaries from "@/components/Admin/Job/Salaries";
 import SelectionProcedure from "@/components/Admin/Job/SelectionProcedure";
 import Clashes from "@/components/Admin/Job/Clashes";
 import JobAnalytics from "@/components/Admin/Job/JobAnalytics";
-import { ClashesFC } from "@/dto/Clashes";
+import {
+  ClashesFC,
+  EMPTY_CLASHES,
+  isValidClashesResponse,
+  normalizeClashesResponse,
+} from "@/dto/Clashes";
+import { isAdmin } from "@/helpers/authUtils";
+import { JobExportModal } from "@/components/jobs/JobExportModal";
 const currentStatusOptions = [
   "INITIALIZED",
   "SCHEDULED",
@@ -42,7 +49,7 @@ const currentStatusOptions = [
 
 const JobDetailPage = ({ params }: { params: { jobId: string } }) => {
   const [job, setData] = useState<JobDetailFC>(null);
-  const [clashes, setClashes] = useState<ClashesFC>(null);
+  const [clashes, setClashes] = useState<ClashesFC>(EMPTY_CLASHES);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState(null);
@@ -52,6 +59,7 @@ const JobDetailPage = ({ params }: { params: { jobId: string } }) => {
   const [selectedFaculties, setSelectedFaculties] = useState([]);
   const [facultyDropDown, setFacultyDropdown] = useState([false]);
   const [approvalModal, setApprovalModal] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [companyFormData, setCompanyFormData] = useState({
     name: "",
     size: 0,
@@ -87,25 +95,32 @@ const JobDetailPage = ({ params }: { params: { jobId: string } }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [
-          jobDetailData,
-          jafDetailsData,
-          recruiterData,
-          facultyData,
-          clashes,
-        ] = await Promise.all([
+        const [jobDetailData, jafDetailsData, recruiterData, facultyData] =
+          await Promise.all([
           fetchJobById(params.jobId),
           getJafDetails(),
           fetchRecruiterData(),
           fetchFaculties(),
-          fetchClashes(params.jobId),
         ]);
         setJafDetails(jafDetailsData);
         setData(jobDetailData);
         setFormData(jobDetailData);
         setFacultyData(facultyData);
-        setClashes(clashes);
+        try {
+          const clashesData = await fetchClashes(params.jobId);
+          const normalizedClashes = normalizeClashesResponse(clashesData);
+
+          if (!isValidClashesResponse(clashesData)) {
+            toast.error("Could not load clashes for this job");
+          }
+
+          setClashes(normalizedClashes);
+        } catch (_error) {
+          setClashes(EMPTY_CLASHES);
+          toast.error("Could not load clashes for this job");
+        }
       } catch (error) {
+        setClashes(EMPTY_CLASHES);
         toast.error("Error fetching data");
       } finally {
         setLoading(false);
@@ -307,6 +322,15 @@ const JobDetailPage = ({ params }: { params: { jobId: string } }) => {
                 <Button onClick={handleEditClick}>
                   {editMode ? "Save Application" : "Edit Application"}
                 </Button>
+                {isAdmin() && (
+                  <Button
+                    variant="outline"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                    onClick={() => setExportModalOpen(true)}
+                  >
+                    Download All Details
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -702,7 +726,16 @@ const JobDetailPage = ({ params }: { params: { jobId: string } }) => {
             loading={loading}
           />
           {job && <JobAnalytics jobId={job.id} />}
-          {clashes ? <Clashes clashes={clashes} /> : <Loader />}
+          <Clashes clashes={clashes} />
+          {exportModalOpen && (
+            <JobExportModal
+              open={exportModalOpen}
+              onClose={() => setExportModalOpen(false)}
+              jobId={job.id}
+              jobRole={job.role}
+              companyName={job.company?.name}
+            />
+          )}
         </div>
       )}
     </div>
