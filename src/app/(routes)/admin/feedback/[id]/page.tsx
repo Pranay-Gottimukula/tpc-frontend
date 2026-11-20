@@ -2,40 +2,29 @@
 
 import { useRouter } from "next/navigation";
 import { fetchFeedbackById } from "@/helpers/api";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Loader from "@/components/Loader/loader";
-import { Button } from "antd";
-import jsPDF from "jspdf";
+import { Button, Result } from "antd";
 import { ArrowLeftOutlined, DownloadOutlined } from "@ant-design/icons";
-import { generateFeedbackPdf } from "@/utils/generateFeedbackPdf";
-
-/* ---------------- Rating Mapping ---------------- */
-
-const RATING_LABELS: Record<number, string> = {
-  5: "Strongly Agree",
-  4: "Agree",
-  3: "Neutral",
-  2: "Disagree",
-  1: "Strongly Disagree",
-};
-
-const getRatingLabel = (value?: number) =>
-  value ? RATING_LABELS[value] ?? "-" : "-";
+import { generateFeedbackPdf, getRatingLabel } from "@/utils/generateFeedbackPdf";
 
 /* ---------------- Page ---------------- */
 
 const FeedbackDetailPage = ({ params }: any) => {
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<any>();
-  const pdfRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
     const getData = async () => {
-      const data = await fetchFeedbackById(params.id);
-      console.log(data);
-      setFeedback(data);
-      setLoading(false);
+      try {
+        const data = await fetchFeedbackById(params.id);
+        if (data?.id) setFeedback(data);
+      } catch {
+        setFeedback(undefined);
+      } finally {
+        setLoading(false);
+      }
     };
     getData();
   }, [params.id]);
@@ -56,6 +45,20 @@ const FeedbackDetailPage = ({ params }: any) => {
     );
   }
 
+  if (!feedback?.id) {
+    return (
+      <Result
+        status="404"
+        title="Feedback not found"
+        extra={
+          <Button type="primary" onClick={() => router.push("/admin/feedback")}>
+            Go Back
+          </Button>
+        }
+      />
+    );
+  }
+
   /* ---------------- UI ---------------- */
 
   return (
@@ -73,7 +76,7 @@ const FeedbackDetailPage = ({ params }: any) => {
         <Button icon={<DownloadOutlined />} onClick={downloadPdf}>Download PDF</Button>
       </div>
 
-      <div ref={pdfRef} className="bg-white p-8 border">
+      <div className="bg-white p-8 border">
         {/* Header */}
         <h2 className="text-2xl font-semibold text-center">
           TRAINING AND PLACEMENT OFFICE
@@ -89,12 +92,12 @@ const FeedbackDetailPage = ({ params }: any) => {
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-16">
-          <Info label="Recruiter Name" value={feedback.recruiter.user.name} />
-          <Info label="Recruiter Email" value={feedback.recruiter.user.email} />
-          <Info label="Designation" value={feedback.recruiter.designation} />
-          <Info label="Company Name" value={feedback.company.name} />
+          <Info label="Recruiter Name" value={feedback.recruiter?.user?.name} />
+          <Info label="Recruiter Email" value={feedback.recruiter?.user?.email} />
+          <Info label="Designation" value={feedback.recruiter?.designation} />
+          <Info label="Company Name" value={feedback.company?.name} />
           <Info label="Date" value={new Date(feedback.createdAt).toLocaleDateString('en-GB')} />
-          <Info label="Season" value={`${feedback.season.year} ${feedback.season.type}`} />
+          <Info label="Season" value={`${feedback.season?.year ?? "-"} ${feedback.season?.type ?? ""}`} />
         </div>
 
         {/* Ratings */}
@@ -102,14 +105,21 @@ const FeedbackDetailPage = ({ params }: any) => {
           Feedback Ratings
         </h3>
 
-        <Rating label="Communication Promptness" value={feedback.communicationPromptness} />
-        <Rating label="Query Handling" value={feedback.queryHandling} />
-        <Rating label="Logistics Arrangement" value={feedback.logisticsArrangement} />
-        <Rating label="Student Familiarity" value={feedback.studentFamiliarity} />
-        <Rating label="Student Communication" value={feedback.studentCommunication} />
-        <Rating label="Resume Quality" value={feedback.resumeQuality} />
-        <Rating label="Student Preparedness" value={feedback.studentPreparedness} />
-        <Rating label="Discipline & Punctuality" value={feedback.disciplineAndPunctuality} />
+        {[
+          ["Communication Promptness", feedback.communicationPromptness],
+          ["Query Handling", feedback.queryHandling],
+          ["Logistics Arrangement", feedback.logisticsArrangement],
+          ["Student Familiarity", feedback.studentFamiliarity],
+          ["Student Communication", feedback.studentCommunication],
+          ["Resume Quality", feedback.resumeQuality],
+          ["Student Preparedness", feedback.studentPreparedness],
+          ["Discipline & Punctuality", feedback.disciplineAndPunctuality],
+        ].map(([label, value]) => (
+          <div className="mb-3" key={label}>
+            <span className="font-semibold text-[18px]">{label}:</span>{" "}
+            <span>{getRatingLabel(value)}</span>
+          </div>
+        ))}
 
         {/* Free text */}
         <div className="mt-8">
@@ -138,13 +148,6 @@ const Info = ({ label, value }: any) => (
   <div>
     <span className="font-semibold text-[18px]">{label}:</span>{" "}
     <span>{value || "-"}</span>
-  </div>
-);
-
-const Rating = ({ label, value }: any) => (
-  <div className="mb-3">
-    <span className="font-semibold text-[18px]">{label}:</span>{" "}
-    <span>{getRatingLabel(value)}</span>
   </div>
 );
 

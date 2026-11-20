@@ -26,7 +26,9 @@ export default function RecruiterFeedbackPage() {
     const fetchSeasons = async () => {
       try {
         const data = await getRecruiterFeedbackSeasons();
-        setSeasons(data || []);
+        setSeasons(Array.isArray(data) ? data : []);
+      } catch {
+        setSeasons([]);
       } finally {
         setLoading(false);
       }

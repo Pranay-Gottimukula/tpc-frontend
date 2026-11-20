@@ -10,7 +10,7 @@ const RATING_LABELS: Record<number, string> = {
   1: "Strongly Disagree",
 };
 
-const getRatingLabel = (value?: number) =>
+export const getRatingLabel = (value?: number) =>
   value ? RATING_LABELS[value] ?? "-" : "-";
 
 /* ---------------- Types ---------------- */
@@ -32,6 +32,7 @@ const renderSingleFeedback = (
   const left = 60;
   const right = 535;
   const lineGap = 18;
+  const pageHeight = doc.internal.pageSize.getHeight();
 
   const centerText = (text: string, size: number) => {
     doc.setFontSize(size);
@@ -40,6 +41,10 @@ const renderSingleFeedback = (
   };
 
   const sectionTitle = (text: string) => {
+    if (y + 10 > pageHeight - 50) {
+      doc.addPage();
+      y = 50;
+    }
     y += 10;
     doc.setFontSize(13);
     doc.text(text, left, y);
@@ -62,10 +67,10 @@ const renderSingleFeedback = (
 
       const x = left + index * colWidth;
 
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text(`${item.label}:`, x, y);
 
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       const valueX = x + 90;
       const maxValueWidth = colWidth - 95;
 
@@ -88,6 +93,18 @@ const renderSingleFeedback = (
     y += lineGap;
   };
 
+  const paragraph = (text: string, maxWidth = 420) => {
+    const wrapped = doc.splitTextToSize(text || "-", maxWidth);
+    wrapped.forEach((line: string) => {
+      if (y > pageHeight - 50) {
+        doc.addPage();
+        y = 50;
+      }
+      doc.text(line, left, y);
+      y += lineGap;
+    });
+  };
+
   /* ---------------- Header ---------------- */
 
   centerText("TRAINING AND PLACEMENT OFFICE", 18);
@@ -106,22 +123,22 @@ const renderSingleFeedback = (
   twoColRow([
     {
       label: "Name of official",
-      value: feedback.recruiter.user.name,
+      value: feedback.recruiter?.user?.name || "-",
     },
     {
       label: "Email ID",
-      value: feedback.recruiter.user.email,
+      value: feedback.recruiter?.user?.email || "-",
     },
   ]);
 
   twoColRow([
     {
       label: "Designation",
-      value: feedback.recruiter.designation,
+      value: feedback.recruiter?.designation || "-",
     },
     {
       label: "Company Name",
-      value: feedback.company.name,
+      value: feedback.company?.name || "-",
     },
   ]);
 
@@ -132,7 +149,7 @@ const renderSingleFeedback = (
     },
     {
       label: "Season",
-      value: `${feedback.season.year} ${feedback.season.type}`,
+      value: `${feedback.season?.year ?? "-"} ${feedback.season?.type ?? ""}`,
     },
   ]);
 
@@ -179,21 +196,14 @@ const renderSingleFeedback = (
 
   /* ---------------- Free Text ---------------- */
 
+  doc.setFont("helvetica", "normal");
   sectionTitle("Right Time to Contact");
   doc.setFontSize(11);
-  const rtc = doc.splitTextToSize(
-    feedback.rightTimeToContact || "-",
-    420,
-  );
-  doc.text(rtc, left, y);
-  y += rtc.length * lineGap + 10;
+  paragraph(feedback.rightTimeToContact);
+  y += 10;
 
   sectionTitle("Recommendations");
-  const rec = doc.splitTextToSize(
-    feedback.recommendations || "-",
-    420,
-  );
-  doc.text(rec, left, y);
+  paragraph(feedback.recommendations);
 };
 
 /* ---------------- Public API ---------------- */
@@ -214,8 +224,8 @@ export const generateFeedbackPdf = (
 
   const defaultName =
     feedbacks.length === 1
-      ? `Feedback_${feedbacks[0].company.name}_${feedbacks[0].season.year}.pdf`
-      : `Recruiter_Feedbacks_${feedbacks[0].season.year}.pdf`;
+      ? `Feedback_${feedbacks[0].company?.name}_${feedbacks[0].season?.year}.pdf`
+      : "Recruiter_Feedbacks.pdf";
 
   doc.save(options?.fileName ?? defaultName);
 };

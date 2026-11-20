@@ -39,14 +39,18 @@ export default function RecruiterFeedbackForm({
   const onSubmit = async (values: any) => {
     try {
       setSubmitting(true);
-      await addRecruiterFeedback({ seasonId, ...values });
+      const res = await addRecruiterFeedback({ seasonId, ...values });
+      if (!res?.success) {
+        const serverMessage = Array.isArray(res?.message)
+          ? res.message[0]
+          : res?.message;
+        message.error(serverMessage || "Failed to submit feedback");
+        return;
+      }
       message.success("Feedback submitted successfully");
       router.push("/recruiter/feedback");
-    } catch (err: any) {
-      message.error(
-        err?.response?.data?.message ||
-          "Feedback already submitted for this season"
-      );
+    } catch {
+      message.error("Failed to submit feedback");
     } finally {
       setSubmitting(false);
     }

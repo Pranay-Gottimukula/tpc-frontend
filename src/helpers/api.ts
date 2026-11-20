@@ -435,13 +435,10 @@ export const fetchEventById = async (eventId: any) => {
   return apiCall(`/events/${eventId}`);
 };
 
-export const fetchAllFeedbacks = async (filter?: string) => {
-  return apiCall(
-    filter ? `/admin/feedback?${filter}` : "/admin/feedback",
-    {
-      next: { tags: ["AllFeedbacks"] },
-    },
-  );
+export const fetchAllFeedbacks = async () => {
+  return apiCall("/admin/feedback", {
+    next: { tags: ["AllFeedbacks"] },
+  });
 };
 
 export const fetchFeedbackById = async (feedbackId: string) => {
@@ -476,6 +473,7 @@ export const addRecruiterFeedback = async (body: any) => {
   return apiCall("/recruiter-feedback", {
     method: "POST",
     body,
+    recieveResponse: true,
   });
 };
 

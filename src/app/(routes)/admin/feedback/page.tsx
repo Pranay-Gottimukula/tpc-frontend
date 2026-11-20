@@ -3,9 +3,10 @@
 import { fetchAllFeedbacks, fetchFeedbackById } from "@/helpers/api";
 import Table from "@/components/NewTableComponent/Table";
 import { createMRTColumnHelper } from "material-react-table";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Loader from "@/components/Loader/loader";
 import { generateFeedbackPdf } from "@/utils/generateFeedbackPdf";
+import { message } from "antd";
 
 const columnHelper = createMRTColumnHelper<any>();
 
@@ -26,12 +27,19 @@ const columns = [
 const FeedbackPage = () => {
   const [loading, setLoading] = useState(true);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const downloading = useRef(false);
 
   useEffect(() => {
     const getData = async () => {
-      const data = await fetchAllFeedbacks();
-      setFeedbacks(data);
-      setLoading(false);
+      try {
+        const data = await fetchAllFeedbacks();
+        if (Array.isArray(data)) setFeedbacks(data);
+        else message.error("Failed to load feedback");
+      } catch {
+        message.error("Failed to load feedback");
+      } finally {
+        setLoading(false);
+      }
     };
     getData();
   }, []);
@@ -56,16 +64,45 @@ const FeedbackPage = () => {
         type="feedback"
         buttonText="Download Selected Feedbacks (PDF)"
         buttonAction={async (selectedRows: any[]) => {
+          if (downloading.current) return;
           if (!selectedRows || selectedRows.length === 0) return;
 
-          // Fetch full feedback data of each feedback
-          const fullFeedbacks = await Promise.all(
-            selectedRows.map((row) => fetchFeedbackById(row.id)),
-          );
+          downloading.current = true;
+          const rows = selectedRows.slice(0, 50);
+          const loadingKey = "feedback-pdf-download";
 
-          generateFeedbackPdf(fullFeedbacks, {
-            fileName: "Recruiter_Feedbacks.pdf",
-          });
+          try {
+            if (selectedRows.length > 50) {
+              message.warning("Only the first 50 selected feedbacks will be downloaded");
+            }
+            message.loading({ content: "Preparing feedback PDF...", key: loadingKey, duration: 0 });
+
+            const fullFeedbacks = [];
+            let failed = 0;
+            for (const row of rows) {
+              try {
+                const feedback = await fetchFeedbackById(row.id);
+                if (feedback?.id) fullFeedbacks.push(feedback);
+                else failed += 1;
+              } catch {
+                failed += 1;
+              }
+            }
+
+            if (fullFeedbacks.length > 0) {
+              generateFeedbackPdf(fullFeedbacks, {
+                fileName: "Recruiter_Feedbacks.pdf",
+              });
+            }
+            if (failed > 0) {
+              message.warning(`Failed to load ${failed} feedback record${failed === 1 ? "" : "s"}`);
+            }
+          } catch {
+            message.error("Failed to prepare feedback PDF");
+          } finally {
+            message.destroy(loadingKey);
+            downloading.current = false;
+          }
         }}
       />
     </div>
